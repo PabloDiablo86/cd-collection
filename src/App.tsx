@@ -316,16 +316,37 @@ function App() {
             </div>
 
             <div style={{ padding: "8px" }}>
-              <p style={{ margin: 0, fontSize: "12px", color: "#cfcfcf" }}>
-                {album.album}
-              </p>
-              <p style={{ margin: "4px 0 0", fontSize: "11px", color: "#777" }}>
-                {album.year}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
+  <p
+    style={{
+      margin: 0,
+      fontSize: "11px",
+      color: "#999",
+      fontWeight: 600,
+    }}
+  >
+    {album.artist}
+  </p>
+
+  <p
+    style={{
+      margin: "4px 0 0",
+      fontSize: "12px",
+      color: "#cfcfcf",
+    }}
+  >
+    {album.album}
+  </p>
+
+  <p
+    style={{
+      margin: "4px 0 0",
+      fontSize: "11px",
+      color: "#777",
+    }}
+  >
+    {album.year}
+  </p>
+</div>
 
       {/* MODAL */}
       {selectedAlbum && (
