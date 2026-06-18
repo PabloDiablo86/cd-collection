@@ -404,9 +404,10 @@ function App() {
       fontSize: "32px",
       width: "56px",
       height: "56px",
+      flexShrink: 0,
       borderRadius: "50%",
       cursor: currentIndex <= 0 ? "default" : "pointer",
-      opacity: currentIndex <= 0 ? 0.3 : 1,
+      opacity: currentIndex <= 0 ? 0.3 : 0.7,
       transition: "background 0.2s ease",
     }}
   >
@@ -470,31 +471,41 @@ function App() {
   </div>
 
   <button
-    disabled={currentIndex >= filteredAlbums.length - 1}
-    onClick={(e) => {
-      e.stopPropagation();
-      setSelectedAlbum(filteredAlbums[currentIndex + 1]);
-    }}
-    style={{
-      background: "rgba(255,255,255,0.08)",
-      border: "1px solid #444",
-      color: "#fff",
-      fontSize: "32px",
-      width: "56px",
-      height: "56px",
-      borderRadius: "50%",
-      cursor:
-        currentIndex >= filteredAlbums.length - 1
-          ? "default"
-          : "pointer",
-      opacity:
-        currentIndex >= filteredAlbums.length - 1
-          ? 0.3
-          : 1,
-    }}
-  >
-    ❯
-  </button>
+  disabled={currentIndex >= filteredAlbums.length - 1}
+  onClick={(e) => {
+    e.stopPropagation();
+    setSelectedAlbum(filteredAlbums[currentIndex + 1]);
+  }}
+  onMouseEnter={(e) => {
+    if (!e.currentTarget.disabled) {
+      e.currentTarget.style.background = "rgba(255,255,255,0.15)";
+    }
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+  }}
+  style={{
+    background: "rgba(255,255,255,0.08)",
+    border: "1px solid #444",
+    color: "#fff",
+    fontSize: "32px",
+    width: "56px",
+    height: "56px",
+    flexShrink: 0,
+    borderRadius: "50%",
+    cursor:
+      currentIndex >= filteredAlbums.length - 1
+        ? "default"
+        : "pointer",
+    opacity:
+      currentIndex >= filteredAlbums.length - 1
+        ? 0.3
+        : 0.7,
+    transition: "background 0.2s ease",
+  }}
+>
+  ❯
+</button>
           </div>
         </div>
       )}
