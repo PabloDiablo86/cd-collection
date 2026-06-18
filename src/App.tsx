@@ -129,7 +129,7 @@ function App() {
     });
   }, [albums, debouncedSearch, genreFilter, sortBy]);
 
-  const gridConfig = useMemo(() => {
+    const gridConfig = useMemo(() => {
     switch (zoom) {
       case 1:
         return { min: 220, height: 320, gap: 18 };
@@ -141,6 +141,14 @@ function App() {
         return { min: 150, height: 240, gap: 14 };
     }
   }, [zoom]);
+
+  const currentIndex = selectedAlbum
+    ? filteredAlbums.findIndex(
+        (a) =>
+          a.artist === selectedAlbum.artist &&
+          a.album === selectedAlbum.album
+      )
+    : -1;
 
   return (
     <div style={{ padding: "20px" }}>
@@ -317,15 +325,15 @@ function App() {
 
             <div style={{ padding: "8px" }}>
   <p
-    style={{
-      margin: 0,
-      fontSize: "11px",
-      color: "#999",
-      fontWeight: 600,
-    }}
-  >
-    {album.artist}
-  </p>
+  style={{
+    margin: 0,
+    fontSize: "11px",
+    color: "#e0e0e0",
+    fontWeight: 700,
+  }}
+>
+  {album.artist}
+</p>
 
   <p
     style={{
@@ -348,6 +356,10 @@ function App() {
   </p>
 </div>
 
+          </div>
+        ))}
+      </div>
+
       {/* MODAL */}
       {selectedAlbum && (
         <div
@@ -363,16 +375,46 @@ function App() {
           }}
         >
           <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "#222",
-              color: "#fff",
-              padding: "24px",
-              borderRadius: "16px",
-              maxWidth: "700px",
-              width: "100%",
-            }}
-          >
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "20px",
+    width: "100%",
+    maxWidth: "900px",
+  }}
+>
+  <button
+    disabled={currentIndex <= 0}
+    onClick={(e) => {
+      e.stopPropagation();
+      setSelectedAlbum(filteredAlbums[currentIndex - 1]);
+    }}
+    style={{
+      background: "rgba(255,255,255,0.08)",
+      border: "1px solid #444",
+      color: "#fff",
+      fontSize: "32px",
+      width: "56px",
+      height: "56px",
+      borderRadius: "50%",
+      cursor: currentIndex <= 0 ? "default" : "pointer",
+      opacity: currentIndex <= 0 ? 0.3 : 1,
+    }}
+  >
+    ❮
+  </button>
+
+  <div
+    onClick={(e) => e.stopPropagation()}
+    style={{
+      background: "#222",
+      color: "#fff",
+      padding: "24px",
+      borderRadius: "16px",
+      maxWidth: "700px",
+      width: "100%",
+    }}
+  >
             <button
               onClick={() => setSelectedAlbum(null)}
               style={{
@@ -382,6 +424,7 @@ function App() {
               }}
             >
               ✕
+
             </button>
 
             {selectedAlbum.cover && (
@@ -397,7 +440,15 @@ function App() {
               />
             )}
 
-            <h2>{selectedAlbum.artist}</h2>
+            <h2
+  style={{
+    color: "#f5f5f5",
+    marginTop: "10px",
+    marginBottom: "20px",
+  }}
+>
+  {selectedAlbum.artist}
+</h2>
 
 <p>
   <b>Альбом:</b> {selectedAlbum.album}
@@ -418,6 +469,34 @@ function App() {
 <p>
   <b>Примечания:</b> {selectedAlbum.notes || "-"}
 </p>
+  </div>
+
+  <button
+    disabled={currentIndex >= filteredAlbums.length - 1}
+    onClick={(e) => {
+      e.stopPropagation();
+      setSelectedAlbum(filteredAlbums[currentIndex + 1]);
+    }}
+    style={{
+      background: "rgba(255,255,255,0.08)",
+      border: "1px solid #444",
+      color: "#fff",
+      fontSize: "32px",
+      width: "56px",
+      height: "56px",
+      borderRadius: "50%",
+      cursor:
+        currentIndex >= filteredAlbums.length - 1
+          ? "default"
+          : "pointer",
+      opacity:
+        currentIndex >= filteredAlbums.length - 1
+          ? 0.3
+          : 1,
+    }}
+  >
+    ❯
+  </button>
           </div>
         </div>
       )}
