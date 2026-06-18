@@ -404,9 +404,10 @@ function App() {
       fontSize: "32px",
       width: "56px",
       height: "56px",
+      flexShrink: 0,
       borderRadius: "50%",
       cursor: currentIndex <= 0 ? "default" : "pointer",
-      opacity: currentIndex <= 0 ? 0.3 : 1,
+      opacity: currentIndex <= 0 ? 0.3 : 0.7,
       transition: "background 0.2s ease",
     }}
   >
