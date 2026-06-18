@@ -389,6 +389,14 @@ function App() {
       e.stopPropagation();
       setSelectedAlbum(filteredAlbums[currentIndex - 1]);
     }}
+  onMouseEnter={(e) => {
+    if (!e.currentTarget.disabled) {
+      e.currentTarget.style.background = "rgba(255,255,255,0.15)";
+    }
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+  }}
     style={{
       background: "rgba(255,255,255,0.08)",
       border: "1px solid #444",
@@ -399,6 +407,7 @@ function App() {
       borderRadius: "50%",
       cursor: currentIndex <= 0 ? "default" : "pointer",
       opacity: currentIndex <= 0 ? 0.3 : 1,
+      transition: "background 0.2s ease",
     }}
   >
     ❮
@@ -415,17 +424,6 @@ function App() {
       width: "100%",
     }}
   >
-            <button
-              onClick={() => setSelectedAlbum(null)}
-              style={{
-                float: "right",
-                padding: "6px 10px",
-                cursor: "pointer",
-              }}
-            >
-              ✕
-
-            </button>
 
             {selectedAlbum.cover && (
               <img
