@@ -259,6 +259,7 @@ function App() {
                   src={album.cover}
                   alt={album.album}
                   loading="lazy"
+                  decoding="async"
                   style={{
                     width: "100%",
                     height: "100%",
