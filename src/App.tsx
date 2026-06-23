@@ -258,6 +258,7 @@ function App() {
                 <img
                   src={album.cover}
                   alt={album.album}
+                  loading="lazy"
                   style={{
                     width: "100%",
                     height: "100%",

@@ -1,1 +1,9 @@
 npm run dev -- --host
+
+пуш на Vercel
+
+git status
+
+git add .
+git commit -m "Improve mobile navigation buttons"
+git push origin main
