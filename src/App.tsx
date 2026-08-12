@@ -13,11 +13,6 @@ type Album = {
   cover?: string;
 };
 
-type LastFmImage = {
-  "#text": string;
-  size: string;
-};
-
 function App() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -42,23 +37,22 @@ function App() {
 
   const fetchCover = async (artist: string, album: string): Promise<string | null> => {
     const key = `${artist}-${album}`;
-    const cached = cache.get(key);
-    if (cached) return cached;
+    if (cache.has(key)) {
+      return cache.get(key) || null;
+    }
 
     try {
       const url = `https://ws.audioscrobbler.com/2.0/?method=album.getinfo&api_key=${LASTFM_KEY}&artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&format=json`;
       const res = await fetch(url);
-      const data = await res.json();
+      // Строгая типизация ответа API, чтобы TS не ругался на undefined
+      const data = await res.json() as { album?: { image?: Array<{ "#text": string }> } };
       
       const images = data?.album?.image;
-      if (Array.isArray(images) && images.length > 0) {
+      if (images && Array.isArray(images) && images.length > 0) {
         const lastImg = images[images.length - 1];
-        if (lastImg && typeof lastImg === "object" && "#text" in lastImg) {
-          const imageUrl = String(lastImg["#text"]);
-          if (imageUrl) {
-            cache.set(key, imageUrl);
-            return imageUrl;
-          }
+        if (lastImg && lastImg["#text"]) {
+          cache.set(key, lastImg["#text"]);
+          return lastImg["#text"];
         }
       }
     } catch (e) {
