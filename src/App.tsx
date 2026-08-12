@@ -13,6 +13,11 @@ type Album = {
   cover?: string;
 };
 
+type AlbumImage = {
+  "#text": string;
+  size: string;
+};
+
 function App() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -28,7 +33,6 @@ function App() {
     return [...new Set(albums.map((a) => a.genre))].sort();
   }, [albums]);
 
-  // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
@@ -36,7 +40,6 @@ function App() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // 🔥 FETCH COVER (Last.fm)
   const fetchCover = async (artist: string, album: string) => {
     const key = `${artist}-${album}`;
     if (cache.has(key)) return cache.get(key);
@@ -48,20 +51,19 @@ function App() {
       const res = await fetch(url);
       const data = await res.json();
       const image =
-        data?.album?.image?.reverse()?.find((img: any) => img["#text"])?.[
-          "#text"
-        ];
+        data?.album?.image?.reverse()?.find(
+          (img: AlbumImage) => img["#text"]
+        )?.["#text"];
       if (image) {
         cache.set(key, image);
         return image;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.log("cover error", e);
     }
     return null;
   };
 
-  //  AUTO LOAD COVERS (Оптимизировано: один setState в конце)
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -69,16 +71,13 @@ function App() {
       const changes: { index: number; cover: string }[] = [];
 
       for (let i = 0; i < updated.length; i++) {
-        // Пропускаем, если обложка уже есть и не является просто пробелом
         if (updated[i].cover && updated[i].cover.trim()) continue;
-        
         const cover = await fetchCover(updated[i].artist, updated[i].album);
         if (!cancelled && cover) {
           changes.push({ index: i, cover });
         }
       }
 
-      // Применяем все изменения разом
       if (changes.length > 0) {
         changes.forEach(({ index, cover }) => {
           updated[index] = { ...updated[index], cover };
@@ -143,7 +142,6 @@ function App() {
     <div style={{ padding: "20px", background: "#121212", minHeight: "100vh", color: "#fff" }}>
       <h1 style={{ marginBottom: "20px" }}>Музыкальная коллекция</h1>
 
-      {/* CONTROLS */}
       <div
         style={{
           display: "flex",
@@ -183,7 +181,6 @@ function App() {
           <option value="year-asc">Год (старые → новые)</option>
         </select>
 
-        {/* ZOOM */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginLeft: "auto" }}>
           <span style={{ fontSize: "12px", color: "#888" }}>Zoom</span>
           <input
@@ -205,7 +202,6 @@ function App() {
         <b style={{ color: "#fff" }}>{filteredAlbums.length}</b>
       </p>
 
-      {/* GRID */}
       <div
         style={{
           display: "grid",
@@ -235,7 +231,6 @@ function App() {
               e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.25)";
             }}
           >
-            {/* COVER */}
             <div style={{ height: `${gridConfig.height}px`, overflow: "hidden" }}>
               {album.cover && album.cover.trim() ? (
                 <img
@@ -284,22 +279,10 @@ function App() {
                       .slice(0, 2)
                       .join("")}
                   </div>
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      color: "#aaa",
-                      lineHeight: 1.2,
-                    }}
-                  >
+                  <div style={{ fontSize: "11px", color: "#aaa", lineHeight: 1.2 }}>
                     {album.album}
                   </div>
-                  <div
-                    style={{
-                      marginTop: "6px",
-                      fontSize: "10px",
-                      color: "#666",
-                    }}
-                  >
+                  <div style={{ marginTop: "6px", fontSize: "10px", color: "#666" }}>
                     {album.year} • {album.genre}
                   </div>
                 </div>
@@ -320,7 +303,6 @@ function App() {
         ))}
       </div>
 
-      {/* MODAL */}
       {selectedAlbum && (
         <div
           onClick={() => setSelectedAlbum(null)}
@@ -340,6 +322,14 @@ function App() {
             onClick={(e) => {
               e.stopPropagation();
               setSelectedAlbum(filteredAlbums[currentIndex - 1]);
+            }}
+            onMouseEnter={(e) => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.background = "rgba(255,255,255,0.15)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(255,255,255,0.08)";
             }}
             style={{
               background: "rgba(255,255,255,0.08)",
@@ -402,6 +392,14 @@ function App() {
             onClick={(e) => {
               e.stopPropagation();
               setSelectedAlbum(filteredAlbums[currentIndex + 1]);
+            }}
+            onMouseEnter={(e) => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.background = "rgba(255,255,255,0.15)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(255,255,255,0.08)";
             }}
             style={{
               background: "rgba(255,255,255,0.08)",
