@@ -28,7 +28,6 @@ function App() {
     return [...new Set(albums.map((a) => a.genre))].sort();
   }, [albums]);
 
-  // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
@@ -36,7 +35,6 @@ function App() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // 🔥 FETCH COVER (Last.fm) - безопасная версия для strict TS
   const fetchCover = async (artist: string, album: string): Promise<string | null> => {
     const key = `${artist}-${album}`;
     if (cache.has(key)) {
@@ -49,15 +47,18 @@ function App() {
         artist
       )}&album=${encodeURIComponent(album)}&format=json`;
       const res = await fetch(url);
-      const data: any = await res.json();
+      const data = await res.json();
       
+      // Безопасное извлечение картинки для строгого режима TS
       const images = data?.album?.image;
       if (Array.isArray(images) && images.length > 0) {
         const lastImage = images[images.length - 1];
-        if (lastImage && lastImage["#text"]) {
-          const imageUrl = String(lastImage["#text"]);
-          cache.set(key, imageUrl);
-          return imageUrl;
+        if (lastImage && typeof lastImage === 'object' && '#text' in lastImage) {
+          const imageUrl = String(lastImage['#text']);
+          if (imageUrl) {
+            cache.set(key, imageUrl);
+            return imageUrl;
+          }
         }
       }
     } catch (e) {
@@ -66,7 +67,6 @@ function App() {
     return null;
   };
 
-  // 🔥 AUTO LOAD COVERS - оптимизировано: один setState в конце для всех найденных обложек
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -74,7 +74,6 @@ function App() {
       const changes: { index: number; cover: string }[] = [];
 
       for (let i = 0; i < updated.length; i++) {
-        // Пропускаем, если обложка уже есть и не является просто пробелом
         if (updated[i].cover && updated[i].cover.trim()) continue;
         
         const cover = await fetchCover(updated[i].artist, updated[i].album);
@@ -148,16 +147,7 @@ function App() {
     <div style={{ padding: "20px", background: "#121212", minHeight: "100vh", color: "#fff" }}>
       <h1 style={{ marginBottom: "20px" }}>Музыкальная коллекция</h1>
 
-      {/* CONTROLS */}
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-          marginBottom: "20px",
-          alignItems: "center",
-        }}
-      >
+      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px", alignItems: "center" }}>
         <input
           type="text"
           placeholder="Поиск..."
@@ -172,9 +162,7 @@ function App() {
         >
           <option value="">Все жанры</option>
           {genres.map((genre) => (
-            <option key={genre} value={genre}>
-              {genre}
-            </option>
+            <option key={genre} value={genre}>{genre}</option>
           ))}
         </select>
         <select
@@ -205,18 +193,10 @@ function App() {
       </div>
 
       <p style={{ color: "#888", marginBottom: "20px" }}>
-        Всего альбомов: <b style={{ color: "#fff" }}>{albums.length}</b> | Показано:{" "}
-        <b style={{ color: "#fff" }}>{filteredAlbums.length}</b>
+        Всего альбомов: <b style={{ color: "#fff" }}>{albums.length}</b> | Показано: <b style={{ color: "#fff" }}>{filteredAlbums.length}</b>
       </p>
 
-      {/* GRID */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(auto-fill, minmax(${gridConfig.min}px, 1fr))`,
-          gap: `${gridConfig.gap}px`,
-        }}
-      >
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill, minmax(${gridConfig.min}px, 1fr))`, gap: `${gridConfig.gap}px` }}>
         {filteredAlbums.map((album) => (
           <div
             key={`${album.artist}-${album.album}`}
@@ -246,83 +226,36 @@ function App() {
                   alt={album.album}
                   loading="lazy"
                   decoding="async"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    transition: "transform 0.35s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "scale(1.05)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "scale(1)";
-                  }}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.35s ease" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.05)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
                 />
               ) : (
-                <div
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: "linear-gradient(135deg,#2a2a2a,#1b1b1b)",
-                    color: "#ddd",
-                    textAlign: "center",
-                    padding: "8px",
-                  }}
-                >
+                <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg,#2a2a2a,#1b1b1b)", color: "#ddd", textAlign: "center", padding: "8px" }}>
                   <div style={{ fontSize: zoom === 3 ? "22px" : "28px", fontWeight: "bold", marginBottom: "6px" }}>
                     {album.artist.split(" ").map((x) => x[0]).slice(0, 2).join("")}
                   </div>
-                  <div style={{ fontSize: "11px", color: "#aaa", lineHeight: 1.2 }}>
-                    {album.album}
-                  </div>
-                  <div style={{ marginTop: "6px", fontSize: "10px", color: "#666" }}>
-                    {album.year} • {album.genre}
-                  </div>
+                  <div style={{ fontSize: "11px", color: "#aaa", lineHeight: 1.2 }}>{album.album}</div>
+                  <div style={{ marginTop: "6px", fontSize: "10px", color: "#666" }}>{album.year} • {album.genre}</div>
                 </div>
               )}
             </div>
             <div style={{ padding: "8px" }}>
-              <p style={{ margin: 0, fontSize: "11px", color: "#e0e0e0", fontWeight: 700 }}>
-                {album.artist}
-              </p>
-              <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#cfcfcf" }}>
-                {album.album}
-              </p>
-              <p style={{ margin: "4px 0 0", fontSize: "11px", color: "#777" }}>
-                {album.year}
-              </p>
+              <p style={{ margin: 0, fontSize: "11px", color: "#e0e0e0", fontWeight: 700 }}>{album.artist}</p>
+              <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#cfcfcf" }}>{album.album}</p>
+              <p style={{ margin: "4px 0 0", fontSize: "11px", color: "#777" }}>{album.year}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* MODAL */}
       {selectedAlbum && (
-        <div
-          onClick={() => setSelectedAlbum(null)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.85)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-            zIndex: 1000,
-          }}
-        >
+        <div onClick={() => setSelectedAlbum(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", zIndex: 1000 }}>
           <button
             disabled={currentIndex <= 0}
             onClick={(e) => {
               e.stopPropagation();
-              if (currentIndex > 0) {
-                setSelectedAlbum(filteredAlbums[currentIndex - 1]);
-              }
+              if (currentIndex > 0) setSelectedAlbum(filteredAlbums[currentIndex - 1]);
             }}
             style={{
               background: "rgba(255,255,255,0.08)",
@@ -341,33 +274,12 @@ function App() {
             ❮
           </button>
 
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "#222",
-              color: "#fff",
-              padding: "24px",
-              borderRadius: "16px",
-              maxWidth: "700px",
-              width: "100%",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "20px",
-              margin: "0 20px",
-            }}
-          >
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "#222", color: "#fff", padding: "24px", borderRadius: "16px", maxWidth: "700px", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: "20px", margin: "0 20px" }}>
             {selectedAlbum.cover && selectedAlbum.cover.trim() && (
-              <img
-                src={selectedAlbum.cover}
-                alt={selectedAlbum.album}
-                style={{ width: "350px", maxWidth: "100%", borderRadius: "10px" }}
-              />
+              <img src={selectedAlbum.cover} alt={selectedAlbum.album} style={{ width: "350px", maxWidth: "100%", borderRadius: "10px" }} />
             )}
             <div style={{ textAlign: "center" }}>
-              <h2 style={{ color: "#f5f5f5", marginTop: "10px", marginBottom: "20px" }}>
-                {selectedAlbum.artist}
-              </h2>
+              <h2 style={{ color: "#f5f5f5", marginTop: "10px", marginBottom: "20px" }}>{selectedAlbum.artist}</h2>
               <p><b>Альбом:</b> {selectedAlbum.album}</p>
               <p><b>Год:</b> {selectedAlbum.year}</p>
               <p><b>Жанр:</b> {selectedAlbum.genre}</p>
@@ -380,9 +292,7 @@ function App() {
             disabled={currentIndex >= filteredAlbums.length - 1}
             onClick={(e) => {
               e.stopPropagation();
-              if (currentIndex < filteredAlbums.length - 1) {
-                setSelectedAlbum(filteredAlbums[currentIndex + 1]);
-              }
+              if (currentIndex < filteredAlbums.length - 1) setSelectedAlbum(filteredAlbums[currentIndex + 1]);
             }}
             style={{
               background: "rgba(255,255,255,0.08)",
