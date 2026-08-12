@@ -136,7 +136,7 @@ function App() {
       case 2:
         return { min: 150, height: 240, gap: 14 };
       case 3:
-        return { min: 120, height: 180, gap: 10 };
+        return { min: 105, height: 160, gap: 8 };
       default:
         return { min: 150, height: 240, gap: 14 };
     }

@@ -16,15 +16,11 @@ type Album = {
 function App() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-
   const [genreFilter, setGenreFilter] = useState("");
   const [sortBy, setSortBy] = useState("artist");
-
   const [zoom, setZoom] = useState(2);
-
-  console.log(albumsData);
   const [albums, setAlbums] = useState<Album[]>(albumsData);
-  const [selectedAlbum, setSelectedAlbum] = useState<any>(null);
+  const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
 
   const cache = useMemo(() => new Map<string, string>(), []);
 
@@ -32,34 +28,29 @@ function App() {
     return [...new Set(albums.map((a) => a.genre))].sort();
   }, [albums]);
 
-  // debounce search
+  // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
     }, 250);
-
     return () => clearTimeout(timer);
   }, [search]);
 
   // 🔥 FETCH COVER (Last.fm)
   const fetchCover = async (artist: string, album: string) => {
     const key = `${artist}-${album}`;
-
     if (cache.has(key)) return cache.get(key);
 
     try {
       const url = `https://ws.audioscrobbler.com/2.0/?method=album.getinfo&api_key=${LASTFM_KEY}&artist=${encodeURIComponent(
         artist
       )}&album=${encodeURIComponent(album)}&format=json`;
-
       const res = await fetch(url);
       const data = await res.json();
-
       const image =
         data?.album?.image?.reverse()?.find((img: any) => img["#text"])?.[
           "#text"
         ];
-
       if (image) {
         cache.set(key, image);
         return image;
@@ -67,34 +58,36 @@ function App() {
     } catch (e) {
       console.log("cover error", e);
     }
-
     return null;
   };
 
-  // 🔥 AUTO LOAD COVERS
+  //  AUTO LOAD COVERS (Оптимизировано: один setState в конце)
   useEffect(() => {
     let cancelled = false;
-
     const load = async () => {
       const updated = [...albums];
+      const changes: { index: number; cover: string }[] = [];
 
       for (let i = 0; i < updated.length; i++) {
-        if (updated[i].cover) continue;
-
-        const cover = await fetchCover(
-          updated[i].artist,
-          updated[i].album
-        );
-
+        // Пропускаем, если обложка уже есть и не является просто пробелом
+        if (updated[i].cover && updated[i].cover.trim()) continue;
+        
+        const cover = await fetchCover(updated[i].artist, updated[i].album);
         if (!cancelled && cover) {
-          updated[i] = { ...updated[i], cover };
-          setAlbums([...updated]);
+          changes.push({ index: i, cover });
         }
+      }
+
+      // Применяем все изменения разом
+      if (changes.length > 0) {
+        changes.forEach(({ index, cover }) => {
+          updated[index] = { ...updated[index], cover };
+        });
+        setAlbums([...updated]);
       }
     };
 
     load();
-
     return () => {
       cancelled = true;
     };
@@ -102,16 +95,12 @@ function App() {
 
   const filteredAlbums = useMemo(() => {
     const q = debouncedSearch.toLowerCase();
-
     const filtered = albums.filter((album) => {
       const matchesSearch =
         album.artist.toLowerCase().includes(q) ||
         album.album.toLowerCase().includes(q) ||
         album.genre.toLowerCase().includes(q);
-
-      const matchesGenre =
-        !genreFilter || album.genre === genreFilter;
-
+      const matchesGenre = !genreFilter || album.genre === genreFilter;
       return matchesSearch && matchesGenre;
     });
 
@@ -129,7 +118,7 @@ function App() {
     });
   }, [albums, debouncedSearch, genreFilter, sortBy]);
 
-    const gridConfig = useMemo(() => {
+  const gridConfig = useMemo(() => {
     switch (zoom) {
       case 1:
         return { min: 220, height: 320, gap: 18 };
@@ -151,8 +140,8 @@ function App() {
     : -1;
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Музыкальная коллекция</h1>
+    <div style={{ padding: "20px", background: "#121212", minHeight: "100vh", color: "#fff" }}>
+      <h1 style={{ marginBottom: "20px" }}>Музыкальная коллекция</h1>
 
       {/* CONTROLS */}
       <div
@@ -169,13 +158,12 @@ function App() {
           placeholder="Поиск..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ padding: "10px", minWidth: "250px" }}
+          style={{ padding: "10px", minWidth: "250px", borderRadius: "6px", border: "1px solid #333", background: "#1e1e1e", color: "#fff" }}
         />
-
         <select
           value={genreFilter}
           onChange={(e) => setGenreFilter(e.target.value)}
-          style={{ padding: "10px" }}
+          style={{ padding: "10px", borderRadius: "6px", border: "1px solid #333", background: "#1e1e1e", color: "#fff" }}
         >
           <option value="">Все жанры</option>
           {genres.map((genre) => (
@@ -184,11 +172,10 @@ function App() {
             </option>
           ))}
         </select>
-
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
-          style={{ padding: "10px" }}
+          style={{ padding: "10px", borderRadius: "6px", border: "1px solid #333", background: "#1e1e1e", color: "#fff" }}
         >
           <option value="artist">Исполнитель (А-Я)</option>
           <option value="album">Альбом (А-Я)</option>
@@ -197,9 +184,8 @@ function App() {
         </select>
 
         {/* ZOOM */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginLeft: "auto" }}>
           <span style={{ fontSize: "12px", color: "#888" }}>Zoom</span>
-
           <input
             type="range"
             min="1"
@@ -208,16 +194,15 @@ function App() {
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
           />
-
           <span style={{ fontSize: "12px", color: "#888" }}>
             {zoom === 1 ? "Comfort" : zoom === 2 ? "Balanced" : "Dense"}
           </span>
         </div>
       </div>
 
-      <p>
-        Всего альбомов: <b>{albums.length}</b> | Показано:{" "}
-        <b>{filteredAlbums.length}</b>
+      <p style={{ color: "#888", marginBottom: "20px" }}>
+        Всего альбомов: <b style={{ color: "#fff" }}>{albums.length}</b> | Показано:{" "}
+        <b style={{ color: "#fff" }}>{filteredAlbums.length}</b>
       </p>
 
       {/* GRID */}
@@ -243,18 +228,16 @@ function App() {
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = "translateY(-5px)";
-              e.currentTarget.style.boxShadow =
-                "0 14px 28px rgba(0,0,0,0.45)";
+              e.currentTarget.style.boxShadow = "0 14px 28px rgba(0,0,0,0.45)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow =
-                "0 2px 8px rgba(0,0,0,0.25)";
+              e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.25)";
             }}
           >
             {/* COVER */}
             <div style={{ height: `${gridConfig.height}px`, overflow: "hidden" }}>
-              {album.cover ? (
+              {album.cover && album.cover.trim() ? (
                 <img
                   src={album.cover}
                   alt={album.album}
@@ -301,7 +284,6 @@ function App() {
                       .slice(0, 2)
                       .join("")}
                   </div>
-
                   <div
                     style={{
                       fontSize: "11px",
@@ -311,7 +293,6 @@ function App() {
                   >
                     {album.album}
                   </div>
-
                   <div
                     style={{
                       marginTop: "6px",
@@ -324,40 +305,17 @@ function App() {
                 </div>
               )}
             </div>
-
             <div style={{ padding: "8px" }}>
-  <p
-  style={{
-    margin: 0,
-    fontSize: "11px",
-    color: "#e0e0e0",
-    fontWeight: 700,
-  }}
->
-  {album.artist}
-</p>
-
-  <p
-    style={{
-      margin: "4px 0 0",
-      fontSize: "12px",
-      color: "#cfcfcf",
-    }}
-  >
-    {album.album}
-  </p>
-
-  <p
-    style={{
-      margin: "4px 0 0",
-      fontSize: "11px",
-      color: "#777",
-    }}
-  >
-    {album.year}
-  </p>
-</div>
-
+              <p style={{ margin: 0, fontSize: "11px", color: "#e0e0e0", fontWeight: 700 }}>
+                {album.artist}
+              </p>
+              <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#cfcfcf" }}>
+                {album.album}
+              </p>
+              <p style={{ margin: "4px 0 0", fontSize: "11px", color: "#777" }}>
+                {album.year}
+              </p>
+            </div>
           </div>
         ))}
       </div>
@@ -374,141 +332,93 @@ function App() {
             alignItems: "center",
             justifyContent: "center",
             padding: "20px",
+            zIndex: 1000,
           }}
         >
+          <button
+            disabled={currentIndex <= 0}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedAlbum(filteredAlbums[currentIndex - 1]);
+            }}
+            style={{
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid #444",
+              color: "#fff",
+              fontSize: "32px",
+              width: "56px",
+              height: "56px",
+              flexShrink: 0,
+              borderRadius: "50%",
+              cursor: currentIndex <= 0 ? "default" : "pointer",
+              opacity: currentIndex <= 0 ? 0.3 : 0.7,
+              transition: "background 0.2s ease",
+            }}
+          >
+            ❮
+          </button>
+
           <div
-  style={{
-    display: "flex",
-    alignItems: "center",
-    gap: "20px",
-    width: "100%",
-    maxWidth: "900px",
-  }}
->
-  <button
-    disabled={currentIndex <= 0}
-    onClick={(e) => {
-      e.stopPropagation();
-      setSelectedAlbum(filteredAlbums[currentIndex - 1]);
-    }}
-  onMouseEnter={(e) => {
-    if (!e.currentTarget.disabled) {
-      e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-    }
-  }}
-  onMouseLeave={(e) => {
-    e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-  }}
-    style={{
-      background: "rgba(255,255,255,0.08)",
-      border: "1px solid #444",
-      color: "#fff",
-      fontSize: "32px",
-      width: "56px",
-      height: "56px",
-      flexShrink: 0,
-      borderRadius: "50%",
-      cursor: currentIndex <= 0 ? "default" : "pointer",
-      opacity: currentIndex <= 0 ? 0.3 : 0.7,
-      transition: "background 0.2s ease",
-    }}
-  >
-    ❮
-  </button>
-
-  <div
-    onClick={(e) => e.stopPropagation()}
-    style={{
-      background: "#222",
-      color: "#fff",
-      padding: "24px",
-      borderRadius: "16px",
-      maxWidth: "700px",
-      width: "100%",
-    }}
-  >
-
-            {selectedAlbum.cover && (
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#222",
+              color: "#fff",
+              padding: "24px",
+              borderRadius: "16px",
+              maxWidth: "700px",
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "20px",
+              margin: "0 20px",
+            }}
+          >
+            {selectedAlbum.cover && selectedAlbum.cover.trim() && (
               <img
                 src={selectedAlbum.cover}
                 alt={selectedAlbum.album}
                 style={{
                   width: "350px",
                   maxWidth: "100%",
-                  marginBottom: "20px",
                   borderRadius: "10px",
                 }}
               />
             )}
-
-            <h2
-  style={{
-    color: "#f5f5f5",
-    marginTop: "10px",
-    marginBottom: "20px",
-  }}
->
-  {selectedAlbum.artist}
-</h2>
-
-<p>
-  <b>Альбом:</b> {selectedAlbum.album}
-</p>
-
-<p>
-  <b>Год:</b> {selectedAlbum.year}
-</p>
-
-<p>
-  <b>Жанр:</b> {selectedAlbum.genre}
-</p>
-
-<p>
-  <b>Издание:</b> {selectedAlbum.edition || "-"}
-</p>
-
-<p>
-  <b>Примечания:</b> {selectedAlbum.notes || "-"}
-</p>
-  </div>
-
-  <button
-  disabled={currentIndex >= filteredAlbums.length - 1}
-  onClick={(e) => {
-    e.stopPropagation();
-    setSelectedAlbum(filteredAlbums[currentIndex + 1]);
-  }}
-  onMouseEnter={(e) => {
-    if (!e.currentTarget.disabled) {
-      e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-    }
-  }}
-  onMouseLeave={(e) => {
-    e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-  }}
-  style={{
-    background: "rgba(255,255,255,0.08)",
-    border: "1px solid #444",
-    color: "#fff",
-    fontSize: "32px",
-    width: "56px",
-    height: "56px",
-    flexShrink: 0,
-    borderRadius: "50%",
-    cursor:
-      currentIndex >= filteredAlbums.length - 1
-        ? "default"
-        : "pointer",
-    opacity:
-      currentIndex >= filteredAlbums.length - 1
-        ? 0.3
-        : 0.7,
-    transition: "background 0.2s ease",
-  }}
->
-  ❯
-</button>
+            <div style={{ textAlign: "center" }}>
+              <h2 style={{ color: "#f5f5f5", marginTop: "10px", marginBottom: "20px" }}>
+                {selectedAlbum.artist}
+              </h2>
+              <p><b>Альбом:</b> {selectedAlbum.album}</p>
+              <p><b>Год:</b> {selectedAlbum.year}</p>
+              <p><b>Жанр:</b> {selectedAlbum.genre}</p>
+              <p><b>Издание:</b> {selectedAlbum.edition || "-"}</p>
+              <p><b>Примечания:</b> {selectedAlbum.notes || "-"}</p>
+            </div>
           </div>
+
+          <button
+            disabled={currentIndex >= filteredAlbums.length - 1}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedAlbum(filteredAlbums[currentIndex + 1]);
+            }}
+            style={{
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid #444",
+              color: "#fff",
+              fontSize: "32px",
+              width: "56px",
+              height: "56px",
+              flexShrink: 0,
+              borderRadius: "50%",
+              cursor: currentIndex >= filteredAlbums.length - 1 ? "default" : "pointer",
+              opacity: currentIndex >= filteredAlbums.length - 1 ? 0.3 : 0.7,
+              transition: "background 0.2s ease",
+            }}
+          >
+            ❯
+          </button>
         </div>
       )}
     </div>
