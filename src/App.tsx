@@ -13,6 +13,11 @@ type Album = {
   cover?: string;
 };
 
+type LastFmImage = {
+  "#text": string;
+  size: string;
+};
+
 function App() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -37,24 +42,19 @@ function App() {
 
   const fetchCover = async (artist: string, album: string): Promise<string | null> => {
     const key = `${artist}-${album}`;
-    if (cache.has(key)) {
-      const cached = cache.get(key);
-      if (cached) return cached;
-    }
+    const cached = cache.get(key);
+    if (cached) return cached;
 
     try {
-      const url = `https://ws.audioscrobbler.com/2.0/?method=album.getinfo&api_key=${LASTFM_KEY}&artist=${encodeURIComponent(
-        artist
-      )}&album=${encodeURIComponent(album)}&format=json`;
+      const url = `https://ws.audioscrobbler.com/2.0/?method=album.getinfo&api_key=${LASTFM_KEY}&artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&format=json`;
       const res = await fetch(url);
       const data = await res.json();
       
-      // Безопасное извлечение картинки для строгого режима TS
       const images = data?.album?.image;
       if (Array.isArray(images) && images.length > 0) {
-        const lastImage = images[images.length - 1];
-        if (lastImage && typeof lastImage === 'object' && '#text' in lastImage) {
-          const imageUrl = String(lastImage['#text']);
+        const lastImg = images[images.length - 1];
+        if (lastImg && typeof lastImg === "object" && "#text" in lastImg) {
+          const imageUrl = String(lastImg["#text"]);
           if (imageUrl) {
             cache.set(key, imageUrl);
             return imageUrl;
@@ -62,7 +62,7 @@ function App() {
         }
       }
     } catch (e) {
-      console.warn("cover error", e);
+      console.warn("Cover fetch error:", e);
     }
     return null;
   };
@@ -82,7 +82,6 @@ function App() {
         }
       }
 
-      // Применяем все изменения разом, а не 250 раз подряд
       if (changes.length > 0 && !cancelled) {
         changes.forEach(({ index, cover }) => {
           updated[index] = { ...updated[index], cover };
@@ -110,36 +109,26 @@ function App() {
 
     return [...filtered].sort((a, b) => {
       switch (sortBy) {
-        case "year-asc":
-          return a.year - b.year;
-        case "year-desc":
-          return b.year - a.year;
-        case "album":
-          return a.album.localeCompare(b.album);
-        default:
-          return a.artist.localeCompare(b.artist);
+        case "year-asc": return a.year - b.year;
+        case "year-desc": return b.year - a.year;
+        case "album": return a.album.localeCompare(b.album);
+        default: return a.artist.localeCompare(b.artist);
       }
     });
   }, [albums, debouncedSearch, genreFilter, sortBy]);
 
   const gridConfig = useMemo(() => {
     switch (zoom) {
-      case 1:
-        return { min: 220, height: 320, gap: 18 };
-      case 2:
-        return { min: 150, height: 240, gap: 14 };
-      case 3:
-        return { min: 105, height: 160, gap: 8 };
-      default:
-        return { min: 150, height: 240, gap: 14 };
+      case 1: return { min: 220, height: 320, gap: 18 };
+      case 2: return { min: 150, height: 240, gap: 14 };
+      case 3: return { min: 105, height: 160, gap: 8 };
+      default: return { min: 150, height: 240, gap: 14 };
     }
   }, [zoom]);
 
   const currentIndex = selectedAlbum
     ? filteredAlbums.findIndex(
-        (a) =>
-          a.artist === selectedAlbum.artist &&
-          a.album === selectedAlbum.album
+        (a) => a.artist === selectedAlbum.artist && a.album === selectedAlbum.album
       )
     : -1;
 
